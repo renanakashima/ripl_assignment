@@ -27,8 +27,12 @@ PY
     echo "RGB demonstrations already exist (${EXISTING_DEMOS}): ${RGB_TRAJECTORY}"
     exit 0
   fi
-  echo "Existing RGB file has ${EXISTING_DEMOS} demos, but ${NUM_DEMOS} were requested."
-  echo "Move it aside or delete it intentionally, then rerun this script."
+  if (( EXISTING_DEMOS > 0 )); then
+    echo "RGB demonstrations already exist (${EXISTING_DEMOS} retained from ${NUM_DEMOS} requested)."
+    echo "Training will use all retained trajectories: ${RGB_TRAJECTORY}"
+    exit 0
+  fi
+  echo "The existing RGB trajectory contains no demonstrations: ${RGB_TRAJECTORY}"
   exit 1
 fi
 
@@ -49,8 +53,14 @@ import sys
 with h5py.File(sys.argv[1], "r") as handle:
     actual = len(handle.keys())
 expected = int(sys.argv[2])
+if actual == 0:
+    raise SystemExit("Replay did not write any trajectories")
 if actual < expected:
-    raise SystemExit(f"Replay wrote {actual} trajectories; expected at least {expected}")
-print(f"Verified {actual} RGB trajectories")
+    print(
+        f"Warning: replay requested {expected} source episodes but retained {actual}. "
+        "Training will use all retained trajectories."
+    )
+else:
+    print(f"Verified {actual} RGB trajectories")
 PY
 echo "Prepared RGB demonstrations: ${RGB_TRAJECTORY}"

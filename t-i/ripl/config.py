@@ -31,7 +31,7 @@ class TrainConfig(PolicyConfig):
 
     env_id: str = "PushT-v1"
     demo_path: str = "~/.maniskill/demos/PushT-v1/rl/trajectory.rgb.pd_ee_delta_pos.physx_cuda.h5"
-    num_demos: int | None = 100
+    num_demos: int | None = None
     control_mode: str = "pd_ee_delta_pos"
     obs_mode: str = "rgb"
     sim_backend: str = "physx_cuda"

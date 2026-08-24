@@ -54,14 +54,16 @@ runtime type > T4 GPU**. Confirm that `!python --version` reports 3.12.x, then r
 !bash scripts/setup_colab.sh
 ```
 
-Prepare 100 RGB demonstrations:
+Request replay of 100 RGB demonstrations:
 
 ```python
 !NUM_DEMOS=100 REPLAY_ENVS=64 bash scripts/prepare_pusht_demos.sh
 ```
 
-This first downloads ManiSkill's compressed PushT demonstrations and then replays the first 100
-with RGB observations. Replay is a required preprocessing step—the downloaded files omit images.
+This first downloads ManiSkill's compressed PushT demonstrations and then requests replay of the
+first 100 with RGB observations. Replay is a required preprocessing step—the downloaded files omit
+images. ManiSkill can retain fewer trajectories when some replayed episodes are not marked
+successful; the full configuration therefore loads every trajectory actually retained.
 ManiSkill's upstream script uses 256 parallel GPU environments for PushT. The Colab default here
 is 64 to fit a T4; if it succeeds and memory permits, `REPLAY_ENVS=256` most closely matches the
 upstream recipe. PushT is unusually sensitive to tiny simulator differences, so do not change the

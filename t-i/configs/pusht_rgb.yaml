@@ -4,7 +4,7 @@ cuda: true
 
 env_id: PushT-v1
 demo_path: ~/.maniskill/demos/PushT-v1/rl/trajectory.rgb.pd_ee_delta_pos.physx_cuda.h5
-num_demos: 100
+num_demos: null
 control_mode: pd_ee_delta_pos
 obs_mode: rgb
 sim_backend: physx_cuda
@@ -36,4 +36,3 @@ output_dir: runs
 track: false
 wandb_project_name: RIPL-ManiSkill
 demo_type: rl
-
