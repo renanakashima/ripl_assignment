@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ripl-pusht-diffusion-policy"
+version = "0.1.0"
+description = "Visual Diffusion Policy imitation learning for ManiSkill PushT-v1"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "diffusers>=0.30,<1",
+  "h5py>=3.11,<4",
+  "imageio[ffmpeg]>=2.34,<3",
+  "mani_skill>=3.0.0,<4",
+  "numpy>=1.26,<3",
+  "PyYAML>=6,<7",
+  "tensorboard>=2.17,<3",
+  "torch>=2.4,<3",
+  "tqdm>=4.66,<5",
+  "tyro>=0.8,<1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9", "ruff>=0.6,<1"]
+tracking = ["wandb>=0.17,<1"]
+
+[tool.setuptools.packages.find]
+include = ["ripl*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

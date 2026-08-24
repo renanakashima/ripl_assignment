@@ -1,0 +1,38 @@
+exp_name: pusht-rgb-smoke
+seed: 1
+cuda: true
+
+env_id: PushT-v1
+demo_path: ~/.maniskill/demos/PushT-v1/rl/trajectory.rgb.pd_ee_delta_pos.physx_cuda.h5
+num_demos: 4
+control_mode: pd_ee_delta_pos
+obs_mode: rgb
+sim_backend: physx_cuda
+max_episode_steps: 150
+
+obs_horizon: 2
+act_horizon: 1
+pred_horizon: 16
+diffusion_steps: 10
+diffusion_step_embed_dim: 64
+unet_dims: [32, 64, 128]
+n_groups: 8
+visual_feature_dim: 128
+
+total_iters: 10
+batch_size: 8
+lr: 0.0001
+warmup_steps: 2
+dataset_device: cpu
+num_dataloader_workers: 0
+
+log_freq: 1
+eval_freq: 10
+save_freq: 10
+num_eval_episodes: 1
+num_eval_envs: 1
+capture_video: false
+output_dir: runs
+track: false
+demo_type: rl
+
