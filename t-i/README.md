@@ -49,8 +49,8 @@ First, push this folder to a GitHub repository from Cursor. In Colab select **Ru
 runtime type > T4 GPU**. Confirm that `!python --version` reports 3.12.x, then run these cells:
 
 ```python
-!git clone https://github.com/YOUR_USER/YOUR_REPO.git
-%cd YOUR_REPO/t-i
+!git clone https://github.com/renanakashima/ripl_assignment.git
+%cd ripl_assignment/t-i
 !bash scripts/setup_colab.sh
 ```
 
