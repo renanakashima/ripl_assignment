@@ -26,20 +26,20 @@ class _FakeEnv:
 
     def __init__(self):
         self.reset_seed = None
+        self.nest_final_info = True
 
     def reset(self, seed=None):
         self.reset_seed = seed
         return np.zeros((1, 1), dtype=np.float32), {}
 
     def step(self, action):
-        info = {
-            "final_info": {
-                "episode": {
-                    "success_once": torch.tensor([1.0]),
-                    "episode_len": torch.tensor([1.0]),
-                }
-            }
+        episode = {
+            "success_once": torch.tensor([1.0]),
+            "episode_len": torch.tensor([1.0]),
         }
+        info = (
+            {"final_info": {"episode": episode}} if self.nest_final_info else {"episode": episode}
+        )
         return (
             np.zeros((1, 1), dtype=np.float32),
             torch.zeros(1),
@@ -61,4 +61,20 @@ def test_evaluation_seeds_environment_reset():
         seed=123,
     )
     assert env.reset_seed == 123
+    assert metrics["success_once"].tolist() == [1.0]
+
+
+def test_evaluation_accepts_direct_cpu_terminal_metrics():
+    env = _FakeEnv()
+    env.nest_final_info = False
+    metrics = evaluate_policy(
+        1,
+        _FakePolicy(),
+        env,
+        torch.device("cpu"),
+        "physx_cpu",
+        progress_bar=False,
+        seed=7,
+    )
+    assert env.reset_seed == 7
     assert metrics["success_once"].tolist() == [1.0]

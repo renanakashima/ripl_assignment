@@ -41,8 +41,15 @@ def evaluate_policy(
             if truncated.any():
                 if not truncated.all():
                     raise RuntimeError("Vector episodes desynchronized during evaluation")
-                final_info = info["final_info"]
-                if isinstance(final_info, dict):
+                final_info = info.get("final_info")
+                if final_info is None:
+                    # Gymnasium's CPU vector environments can return terminal metrics
+                    # directly and reset on the following step. ManiSkill's GPU vector
+                    # wrapper uses same-step autoreset and nests them in final_info.
+                    for key, value in info["episode"].items():
+                        item = value.float().cpu().numpy() if torch.is_tensor(value) else value
+                        metrics[key].append(np.asarray(item))
+                elif isinstance(final_info, dict):
                     for key, value in final_info["episode"].items():
                         item = value.float().cpu().numpy() if torch.is_tensor(value) else value
                         metrics[key].append(np.asarray(item))
@@ -53,6 +60,8 @@ def evaluate_policy(
                 completed += envs.num_envs
                 if progress:
                     progress.update(min(envs.num_envs, num_episodes - progress.n))
+                if final_info is None and completed < num_episodes:
+                    observations, _ = envs.reset()
 
     if progress:
         progress.close()
