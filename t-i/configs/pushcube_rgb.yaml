@@ -1,0 +1,39 @@
+exp_name: pushcube-rgb-diffusion-spatial
+seed: 1
+cuda: true
+
+env_id: PushCube-v1
+demo_path: ~/.maniskill/demos/PushCube-v1/motionplanning/trajectory.rgb.pd_ee_delta_pos.physx_cpu.h5
+num_demos: null
+control_mode: pd_ee_delta_pos
+obs_mode: rgb
+sim_backend: physx_cpu
+max_episode_steps: 100
+
+obs_horizon: 2
+act_horizon: 8
+pred_horizon: 16
+diffusion_steps: 100
+diffusion_step_embed_dim: 64
+unet_dims: [64, 128, 256]
+n_groups: 8
+visual_feature_dim: 256
+pool_visual_feature_map: false
+
+total_iters: 30000
+batch_size: 256
+lr: 0.0001
+warmup_steps: 500
+dataset_device: cpu
+num_dataloader_workers: 0
+
+log_freq: 100
+eval_freq: 5000
+save_freq: 5000
+num_eval_episodes: 20
+num_eval_envs: 10
+capture_video: true
+output_dir: runs
+track: false
+wandb_project_name: RIPL-ManiSkill
+demo_type: motionplanning

@@ -210,6 +210,7 @@ def main() -> None:
                     envs,
                     device,
                     config.sim_backend,
+                    seed=config.seed,
                 )
                 latest_metrics = {key: float(np.mean(value)) for key, value in raw_metrics.items()}
                 print(f"iteration={iteration} evaluation={latest_metrics}")

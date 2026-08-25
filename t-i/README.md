@@ -1,15 +1,15 @@
-# Visual Diffusion Policy for ManiSkill `PushT-v1`
+# Visual Diffusion Policy for ManiSkill
 
 This repository implements imitation learning with an RGB-conditioned Diffusion Policy for
-ManiSkill's `PushT-v1` task. It is organized for editing in Cursor and training in Google Colab;
-no local NVIDIA server is required.
+ManiSkill's `PushT-v1` and `PushCube-v1` tasks. It is organized for editing in Cursor and training
+on Google Colab or Georgia Tech HCE; no local NVIDIA server is required.
 
 The policy follows the core formulation from the
 [Diffusion Policy paper](https://arxiv.org/abs/2303.04137): it encodes the two latest visual and
 proprioceptive observations, conditions a 1-D U-Net with those features through FiLM, denoises a
-16-step action sequence with a cosine-schedule DDPM, executes one action, and replans. “Visual”
-here means RGB is the main scene input while low-dimensional robot state is retained, as in a
-standard visuomotor policy.
+16-step action sequence with a cosine-schedule DDPM, executes a configurable action chunk, and
+replans. “Visual” here means RGB is the main scene input while low-dimensional robot state is
+retained, as in a standard visuomotor policy.
 
 The implementation is adapted from ManiSkill's
 [official Diffusion Policy baseline](https://github.com/mani-skill/ManiSkill/tree/main/examples/baselines/diffusion_policy),
@@ -23,11 +23,15 @@ and the environment/data workflow follows the
 ├── train_dp.py                  # training entry point
 ├── eval_dp.py                   # checkpoint evaluation entry point
 ├── configs/
-│   ├── pusht_rgb.yaml           # full experiment
+│   ├── pushcube_rgb.yaml        # official-aligned visual PushCube experiment
+│   ├── pusht_rgb.yaml           # original PushT experiment
+│   ├── pusht_rgb_spatial.yaml   # spatial PushT follow-up
 │   └── smoke.yaml               # ten-update integration test
 ├── scripts/
 │   ├── setup_colab.sh           # Python dependencies + headless Vulkan
+│   ├── prepare_pushcube_demos.sh
 │   ├── prepare_pusht_demos.sh   # download and replay RGB demonstrations
+│   ├── train_hce_pushcube.sbatch
 │   ├── train_colab.sh
 │   └── verify_setup.py
 ├── notebooks/
@@ -167,6 +171,45 @@ the RGB input before changing the architecture again:
 
 ```bash
 python diagnose_dp.py --checkpoint runs/RUN_NAME/checkpoints/final.pt
+```
+
+## PushCube HCE workflow
+
+PushCube is the recommended assignment experiment after the two visual Push-T policies achieved
+zero closed-loop success despite using RGB and matching demonstration actions offline. The
+PushCube configuration follows ManiSkill's published RGB baseline settings: motion-planning
+demonstrations, `pd_ee_delta_pos`, `physx_cpu`, 100-step episodes, and 30,000 training updates. It
+retains spatial image features and uses the visual baseline's eight-step execution horizon.
+
+On an interactive L40S allocation, download and replay the first 100 demonstrations with RGB:
+
+```bash
+NUM_DEMOS=100 REPLAY_ENVS=10 bash scripts/prepare_pushcube_demos.sh
+```
+
+Run a one-update integration test:
+
+```bash
+python train_dp.py \
+  --config configs/pushcube_rgb.yaml \
+  --exp-name pushcube-rgb-smoke \
+  --num-demos 4 \
+  --batch-size 8 \
+  --total-iters 1 \
+  --warmup-steps 1 \
+  --eval-freq 1 \
+  --save-freq 1 \
+  --num-eval-episodes 1 \
+  --num-eval-envs 1 \
+  --no-capture-video
+```
+
+If that succeeds, submit the persistent full run:
+
+```bash
+mkdir -p logs
+bash -n scripts/train_hce_pushcube.sbatch
+sbatch scripts/train_hce_pushcube.sbatch
 ```
 
 ## Attribution

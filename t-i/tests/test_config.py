@@ -15,3 +15,15 @@ def test_spatial_config_preserves_image_location():
     config = parse_config(TrainConfig, ["--config", "configs/pusht_rgb_spatial.yaml"])
     assert config.pool_visual_feature_map is False
     assert config.act_horizon == 8
+
+
+def test_pushcube_config_uses_official_task_settings():
+    config = parse_config(TrainConfig, ["--config", "configs/pushcube_rgb.yaml"])
+    assert config.env_id == "PushCube-v1"
+    assert config.control_mode == "pd_ee_delta_pos"
+    assert config.obs_mode == "rgb"
+    assert config.sim_backend == "physx_cpu"
+    assert config.max_episode_steps == 100
+    assert config.total_iters == 30_000
+    assert config.act_horizon == 8
+    assert config.pool_visual_feature_map is False

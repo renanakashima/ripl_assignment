@@ -16,6 +16,7 @@ def evaluate_policy(
     device: torch.device,
     sim_backend: str,
     progress_bar: bool = True,
+    seed: int | None = None,
 ) -> dict[str, np.ndarray]:
     """Evaluate complete synchronized episodes and return per-episode metrics."""
     was_training = policy.training
@@ -25,7 +26,7 @@ def evaluate_policy(
     completed = 0
 
     with torch.no_grad():
-        observations, _ = envs.reset()
+        observations, _ = envs.reset(seed=seed)
         while completed < num_episodes:
             tensor_observations = common.to_tensor(observations, device)
             action_sequence = policy.get_action(tensor_observations)

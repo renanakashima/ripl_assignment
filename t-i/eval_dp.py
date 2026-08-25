@@ -58,6 +58,7 @@ def main() -> None:
             envs,
             device,
             sim_backend,
+            seed=seed,
         )
         results = {
             "checkpoint": str(checkpoint_path),
