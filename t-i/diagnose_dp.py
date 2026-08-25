@@ -30,7 +30,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     ensure_supported_python()
-    device = select_device(cuda=True)
+    device = select_device(True)
     checkpoint_path = args.checkpoint.expanduser()
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     valid_fields = {field.name for field in fields(TrainConfig)}
