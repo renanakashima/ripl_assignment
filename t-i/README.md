@@ -162,6 +162,13 @@ mkdir -p logs
 sbatch scripts/train_hce_spatial.sbatch
 ```
 
+If a trained visual checkpoint still has low success, measure whether sampled actions react to
+the RGB input before changing the architecture again:
+
+```bash
+python diagnose_dp.py --checkpoint runs/RUN_NAME/checkpoints/final.pt
+```
+
 ## Attribution
 
 The U-Net, visual encoder, sequence-padding convention, DDPM schedule, EMA, and fair-evaluation
