@@ -217,9 +217,15 @@ def make_mlp(
 
 
 class PlainConv(nn.Module):
-    """Small camera encoder used by the official ManiSkill visual baseline."""
+    """Small camera encoder with optional spatial feature-map pooling."""
 
-    def __init__(self, in_channels: int, out_dim: int = 256):
+    def __init__(
+        self,
+        in_channels: int,
+        out_dim: int = 256,
+        image_size: tuple[int, int] = (128, 128),
+        pool_feature_map: bool = True,
+    ):
         super().__init__()
         self.cnn = nn.Sequential(
             nn.Conv2d(in_channels, 16, 3, padding=1),
@@ -237,8 +243,15 @@ class PlainConv(nn.Module):
             nn.Conv2d(128, 128, 1),
             nn.ReLU(inplace=True),
         )
-        self.pool = nn.AdaptiveMaxPool2d((1, 1))
-        self.fc = make_mlp(128, [out_dim])
+        self.pool_feature_map = pool_feature_map
+        if pool_feature_map:
+            self.pool = nn.AdaptiveMaxPool2d((1, 1))
+            flattened_dim = 128
+        else:
+            self.pool = nn.Identity()
+            height, width = image_size
+            flattened_dim = 128 * (height // 16) * (width // 16)
+        self.fc = make_mlp(flattened_dim, [out_dim])
         self.reset_parameters()
 
     def reset_parameters(self) -> None:

@@ -9,3 +9,9 @@ def test_yaml_config_and_cli_override():
     assert config.total_iters == 12
     assert config.unet_dims == (32, 64, 128)
     assert config.demo_path.endswith("trajectory.rgb.pd_ee_delta_pos.physx_cuda.h5")
+
+
+def test_spatial_config_preserves_image_location():
+    config = parse_config(TrainConfig, ["--config", "configs/pusht_rgb_spatial.yaml"])
+    assert config.pool_visual_feature_map is False
+    assert config.act_horizon == 8

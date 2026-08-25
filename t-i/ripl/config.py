@@ -20,6 +20,9 @@ class PolicyConfig:
     unet_dims: tuple[int, ...] = (64, 128, 256)
     n_groups: int = 8
     visual_feature_dim: int = 256
+    # True preserves compatibility with checkpoints created before this option existed.
+    # New visual Push-T experiments disable it so the encoder retains object location.
+    pool_visual_feature_map: bool = True
 
 
 @dataclass

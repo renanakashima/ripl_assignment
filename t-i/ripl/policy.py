@@ -38,10 +38,16 @@ class DiffusionPolicy(nn.Module):
         if not self.include_rgb:
             raise ValueError("Visual Diffusion Policy requires RGB observations")
 
-        visual_channels = observation_space["rgb"].shape[-1]
+        rgb_shape = observation_space["rgb"].shape
+        visual_channels = rgb_shape[-1]
         if self.include_depth:
             visual_channels += observation_space["depth"].shape[-1]
-        self.visual_encoder = PlainConv(visual_channels, config.visual_feature_dim)
+        self.visual_encoder = PlainConv(
+            visual_channels,
+            config.visual_feature_dim,
+            image_size=(rgb_shape[-3], rgb_shape[-2]),
+            pool_feature_map=config.pool_visual_feature_map,
+        )
         self.noise_pred_net = ConditionalUnet1D(
             input_dim=self.act_dim,
             global_cond_dim=config.obs_horizon * (config.visual_feature_dim + state_dim),

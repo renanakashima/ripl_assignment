@@ -32,6 +32,7 @@ def test_policy_trains_channel_first_and_infers_channel_last():
         unet_dims=(16, 32, 64),
         n_groups=8,
         visual_feature_dim=32,
+        pool_visual_feature_map=False,
     )
     policy = DiffusionPolicy(fake_env, config)
 

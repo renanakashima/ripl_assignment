@@ -130,8 +130,8 @@ and learning rate. Inspect logs with:
 - `max_episode_steps: 150` follows the official PushT baseline rather than the task's default 100.
 - `dataset_device: cpu` conserves Colab GPU memory. Images stay compressed as `uint8` in RAM and
   minibatches are transferred asynchronously.
-- The official baseline assumes 128×128 camera images; this implementation uses adaptive pooling
-  but the prepared ManiSkill data still supplies the official camera resolution.
+- The official baseline assumes 128×128 camera images. The legacy configuration uses adaptive
+  pooling, while the spatial follow-up preserves the resulting 8×8 convolutional feature map.
 - To log to Weights & Biases, run `pip install -e '.[tracking]'` and set `track: true`.
 
 ## Expected-results caveat
@@ -142,6 +142,25 @@ is closed without a maintainer answer. It does not establish an expected RGB res
 demo replay parallelism, dataset provenance, simulator backend, and checkpoint selection as part of
 the experiment. Report your exact configuration and mean success over multiple seeds rather than
 claiming that one run reproduces a separate paper.
+
+## Spatial Push-T correction
+
+`configs/pusht_rgb.yaml` preserves the first completed baseline configuration, whose visual
+encoder globally pools its convolutional feature map. That can discard the T block's image
+location: in RGB mode, Push-T exposes robot/TCP state but withholds privileged object and goal
+poses. The paper-aligned follow-up `configs/pusht_rgb_spatial.yaml` therefore retains the 8×8
+convolutional feature map before projecting it to the 256-dimensional visual embedding and uses
+an eight-step execution horizon for temporally consistent pushes. It is a new architecture and
+must be trained from scratch; old checkpoints remain loadable because pooled encoding stays the
+default when the new configuration field is absent.
+
+On Georgia Tech HCE, create `logs/` before submission because Slurm opens the output file before
+the job script runs:
+
+```bash
+mkdir -p logs
+sbatch scripts/train_hce_spatial.sbatch
+```
 
 ## Attribution
 
