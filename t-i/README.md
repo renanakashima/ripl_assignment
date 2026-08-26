@@ -259,6 +259,10 @@ Prepare or verify the RGB replay on an interactive NVIDIA allocation. The script
 that all 100 selected source trajectories end successfully, then uses ManiSkill's
 `--allow-failure` flag to retain all of them if Push-T's replay-time success calculation produces
 false negatives. It fails unless the resulting RGB dataset contains exactly 100 trajectories.
+The wrapper also corrects a GPU replay state-index mismatch present in affected ManiSkill
+releases: after action `t`, replay must restore recorded state `t + 1`, not state `t`. Without this
+correction, later RGB observations are paired with actions from the wrong recorded state. The
+wrapper inspects the installed implementation and fails rather than applying an ambiguous patch.
 The default of 256 replay environments matches the upstream collection setup:
 
 ```bash

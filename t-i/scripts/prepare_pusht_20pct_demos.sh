@@ -74,7 +74,7 @@ fi
 
 # Keep the source controller unchanged so ManiSkill can replay the demonstrations
 # in parallel on the GPU while rendering RGB observations.
-python -m mani_skill.trajectory.replay_trajectory \
+python scripts/replay_trajectory_aligned.py \
   --traj-path "${RAW_TRAJECTORY}" \
   --use-env-states \
   --target-control-mode pd_ee_delta_pos \
