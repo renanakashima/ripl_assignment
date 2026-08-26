@@ -255,10 +255,14 @@ conversion path only implements joint-controller sources. The run uses 150-step 
 updates, and the official RGB baseline batch size of 256. Train it from scratch so the comparison
 has an independent optimizer and learning-rate schedule.
 
-Prepare or verify the RGB replay on an interactive NVIDIA allocation:
+Prepare or verify the RGB replay on an interactive NVIDIA allocation. The script first verifies
+that all 100 selected source trajectories end successfully, then uses ManiSkill's
+`--allow-failure` flag to retain all of them if Push-T's replay-time success calculation produces
+false negatives. It fails unless the resulting RGB dataset contains exactly 100 trajectories.
+The default of 256 replay environments matches the upstream collection setup:
 
 ```bash
-NUM_DEMOS=100 REPLAY_ENVS=64 bash scripts/prepare_pusht_20pct_demos.sh
+NUM_DEMOS=100 REPLAY_ENVS=256 bash scripts/prepare_pusht_20pct_demos.sh
 ```
 
 Run a one-update integration test before spending the full training budget:
