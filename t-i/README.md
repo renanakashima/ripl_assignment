@@ -43,6 +43,9 @@ and the environment/data workflow follows the
 ├── notebooks/
 │   └── pusht_diffusion_colab.ipynb
 ├── ripl/                        # model, dataset, environments, and evaluation
+├── results/
+│   ├── pushcube_ti_results.md   # completed 3-seed PushCube baseline
+│   └── pusht_progress_2026-08-26.md # Push-T experiments and continuation point
 └── tests/
 ```
 
