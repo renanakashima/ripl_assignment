@@ -19,7 +19,7 @@ export MS_SKIP_ASSET_DOWNLOAD_PROMPT=1
 
 if [[ -z "${RIPL_RUN_DIR:-}" ]]; then
     shopt -s nullglob
-    RIPL_RUN_CANDIDATES=(runs/pusht-rgb-diffusion-spatial-delta-pose__seed1__*)
+    RIPL_RUN_CANDIDATES=(runs/pusht-rgb-diffusion-spatial-replan1__seed1__*)
     if [[ ${#RIPL_RUN_CANDIDATES[@]} -eq 0 ]]; then
         echo "No completed target PushT run found. Set RIPL_RUN_DIR explicitly." >&2
         exit 1

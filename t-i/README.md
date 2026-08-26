@@ -247,12 +247,15 @@ standard deviation from `evaluation-final/summary.json`.
 ## Push-T 20% target workflow
 
 `configs/pusht_rgb_20pct.yaml` is a clean follow-up to the zero-success Push-T runs. It retains
-the spatial RGB encoder that worked for PushCube but restores the settings ManiSkill tunes
-specifically for Push-T: `pd_ee_delta_pose`, one-step execution with replanning after every
-contact, 150-step episodes, and 50,000 updates. It also uses the official RGB baseline batch size
-of 256. Because the controller changes the action dimension, this run must start from scratch.
+the spatial RGB encoder that worked for PushCube and restores one-step execution with replanning
+after every contact, which ManiSkill tunes specifically for Push-T. It keeps the validated
+`pd_ee_delta_pos` replay because ManiSkill cannot convert this end-effector controller to
+`pd_ee_delta_pose`: controller conversion is unsupported in GPU-parallel replay, and its CPU
+conversion path only implements joint-controller sources. The run uses 150-step episodes, 50,000
+updates, and the official RGB baseline batch size of 256. Train it from scratch so the comparison
+has an independent optimizer and learning-rate schedule.
 
-Prepare a separate RGB replay with delta-pose action labels on an interactive L40S allocation:
+Prepare or verify the RGB replay on an interactive NVIDIA allocation:
 
 ```bash
 NUM_DEMOS=100 REPLAY_ENVS=64 bash scripts/prepare_pusht_20pct_demos.sh

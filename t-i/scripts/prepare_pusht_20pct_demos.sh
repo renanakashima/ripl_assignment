@@ -5,7 +5,7 @@ NUM_DEMOS="${NUM_DEMOS:-100}"
 REPLAY_ENVS="${REPLAY_ENVS:-64}"
 DEMO_ROOT="${MS_ASSET_DIR:-${HOME}/.maniskill}/demos"
 RAW_TRAJECTORY="${DEMO_ROOT}/PushT-v1/rl/trajectory.none.pd_ee_delta_pos.physx_cuda.h5"
-RGB_TRAJECTORY="${DEMO_ROOT}/PushT-v1/rl/trajectory.rgb.pd_ee_delta_pose.physx_cuda.h5"
+RGB_TRAJECTORY="${DEMO_ROOT}/PushT-v1/rl/trajectory.rgb.pd_ee_delta_pos.physx_cuda.h5"
 
 python -m mani_skill.utils.download_demo PushT-v1
 
@@ -25,19 +25,19 @@ with h5py.File(sys.argv[1], "r") as handle:
 PY
 )"
   if (( EXISTING_DEMOS > 0 )); then
-    echo "RGB delta-pose demonstrations already exist (${EXISTING_DEMOS}): ${RGB_TRAJECTORY}"
+    echo "RGB demonstrations already exist (${EXISTING_DEMOS}): ${RGB_TRAJECTORY}"
     exit 0
   fi
   echo "The existing RGB trajectory contains no demonstrations: ${RGB_TRAJECTORY}"
   exit 1
 fi
 
-# Replay the downloaded successful environment states while converting the action
-# labels to the controller used by ManiSkill's tuned PushT Diffusion Policy baseline.
+# Keep the source controller unchanged so ManiSkill can replay the demonstrations
+# in parallel on the GPU while rendering RGB observations.
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path "${RAW_TRAJECTORY}" \
   --use-env-states \
-  --target-control-mode pd_ee_delta_pose \
+  --target-control-mode pd_ee_delta_pos \
   --obs-mode rgb \
   --save-traj \
   --count "${NUM_DEMOS}" \
@@ -60,6 +60,6 @@ if actual < expected:
         "Training will use all retained trajectories."
     )
 else:
-    print(f"Verified {actual} RGB delta-pose trajectories")
+    print(f"Verified {actual} RGB trajectories")
 PY
-echo "Prepared RGB delta-pose demonstrations: ${RGB_TRAJECTORY}"
+echo "Prepared RGB demonstrations: ${RGB_TRAJECTORY}"
