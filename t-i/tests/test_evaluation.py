@@ -38,7 +38,9 @@ class _FakeEnv:
             "episode_len": torch.tensor([1.0]),
         }
         info = (
-            {"final_info": {"episode": episode}} if self.nest_final_info else {"episode": episode}
+            {"final_info": {"episode": episode, "overlap": torch.tensor([0.75])}}
+            if self.nest_final_info
+            else {"episode": episode, "overlap": np.array([0.75], dtype=np.float32)}
         )
         return (
             np.zeros((1, 1), dtype=np.float32),
@@ -62,6 +64,8 @@ def test_evaluation_seeds_environment_reset():
     )
     assert env.reset_seed == 123
     assert metrics["success_once"].tolist() == [1.0]
+    assert metrics["max_overlap"].tolist() == [0.75]
+    assert metrics["final_overlap"].tolist() == [0.75]
 
 
 def test_evaluation_accepts_direct_cpu_terminal_metrics():
@@ -78,3 +82,5 @@ def test_evaluation_accepts_direct_cpu_terminal_metrics():
     )
     assert env.reset_seed == 7
     assert metrics["success_once"].tolist() == [1.0]
+    assert metrics["max_overlap"].tolist() == [0.75]
+    assert metrics["final_overlap"].tolist() == [0.75]

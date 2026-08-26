@@ -128,7 +128,8 @@ To evaluate the exponential-moving-average policy and save videos/metrics:
 
 To test temporal execution without retraining, pass `--act-horizon 8`. This changes only how many
 actions from the checkpoint's 16-step prediction are executed before replanning; it does not alter
-the learned weights.
+the learned weights. Push-T evaluation also reports `max_overlap` and `final_overlap`; success
+requires overlap of at least 0.90.
 
 The reported research metric is `success_once`. Training also logs `success_at_end`, return, loss,
 and learning rate. Inspect logs with:

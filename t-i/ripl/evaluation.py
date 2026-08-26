@@ -24,6 +24,8 @@ def evaluate_policy(
     metrics: dict[str, list[np.ndarray]] = defaultdict(list)
     progress = tqdm(total=num_episodes, desc="evaluation") if progress_bar else None
     completed = 0
+    max_overlap: np.ndarray | None = None
+    final_overlap: np.ndarray | None = None
 
     with torch.no_grad():
         observations, _ = envs.reset(seed=seed)
@@ -35,6 +37,17 @@ def evaluate_policy(
 
             for action_index in range(action_sequence.shape[1]):
                 observations, _, _, truncated, info = envs.step(action_sequence[:, action_index])
+                overlap_info = info.get("final_info", info)
+                if isinstance(overlap_info, dict) and "overlap" in overlap_info:
+                    overlap = overlap_info["overlap"]
+                    if torch.is_tensor(overlap):
+                        overlap = overlap.float().cpu().numpy()
+                    final_overlap = np.asarray(overlap)
+                    max_overlap = (
+                        final_overlap.copy()
+                        if max_overlap is None
+                        else np.maximum(max_overlap, final_overlap)
+                    )
                 if truncated.any():
                     break
 
@@ -57,6 +70,11 @@ def evaluate_policy(
                     for episode_info in final_info:
                         for key, value in episode_info["episode"].items():
                             metrics[key].append(np.asarray(value))
+                if max_overlap is not None and final_overlap is not None:
+                    metrics["max_overlap"].append(max_overlap)
+                    metrics["final_overlap"].append(final_overlap)
+                    max_overlap = None
+                    final_overlap = None
                 completed += envs.num_envs
                 if progress:
                     progress.update(min(envs.num_envs, num_episodes - progress.n))

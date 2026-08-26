@@ -10,6 +10,16 @@ from mani_skill.utils.wrappers.flatten import FlattenRGBDObservationWrapper
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 
+class PushTOverlapWrapper(gym.Wrapper):
+    """Expose Push-T target overlap before vector-environment autoreset."""
+
+    def step(self, action):
+        observation, reward, terminated, truncated, info = self.env.step(action)
+        info = dict(info)
+        info["overlap"] = self.unwrapped.pseudo_render_intersection()
+        return observation, reward, terminated, truncated, info
+
+
 def make_eval_envs(
     env_id: str,
     num_envs: int,
@@ -38,6 +48,8 @@ def make_eval_envs(
                 env = gym.make(env_id, reconfiguration_freq=1, **env_kwargs)
                 env = FlattenRGBDObservationWrapper(env)
                 env = FrameStack(env, num_stack=obs_horizon)
+                if env_id == "PushT-v1":
+                    env = PushTOverlapWrapper(env)
                 env = CPUGymWrapper(env, ignore_terminations=True, record_metrics=True)
                 if video_dir and seed == 0:
                     env = RecordEpisode(
@@ -71,6 +83,8 @@ def make_eval_envs(
     episode_steps = gym_utils.find_max_episode_steps_value(env)
     env = FlattenRGBDObservationWrapper(env)
     env = FrameStack(env, num_stack=obs_horizon)
+    if env_id == "PushT-v1":
+        env = PushTOverlapWrapper(env)
     if video_dir:
         env = RecordEpisode(
             env,
