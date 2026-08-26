@@ -26,6 +26,7 @@ and the environment/data workflow follows the
 │   ├── pushcube_rgb.yaml        # official-aligned visual PushCube experiment
 │   ├── pusht_rgb.yaml           # original PushT experiment
 │   ├── pusht_rgb_spatial.yaml   # spatial PushT follow-up
+│   ├── pusht_rgb_20pct.yaml     # task-tuned spatial PushT attempt
 │   └── smoke.yaml               # ten-update integration test
 ├── scripts/
 │   ├── aggregate_eval.py        # summarize final metrics across evaluation seeds
@@ -33,7 +34,10 @@ and the environment/data workflow follows the
 │   ├── setup_colab.sh           # Python dependencies + headless Vulkan
 │   ├── prepare_pushcube_demos.sh
 │   ├── prepare_pusht_demos.sh   # download and replay RGB demonstrations
+│   ├── prepare_pusht_20pct_demos.sh
 │   ├── train_hce_pushcube.sbatch
+│   ├── train_hce_pusht_20pct.sbatch
+│   ├── eval_hce_pusht_20pct.sbatch
 │   ├── train_colab.sh
 │   └── verify_setup.py
 ├── notebooks/
@@ -239,6 +243,65 @@ For the report, preserve the training log, `configs/pushcube_rgb.yaml`, checkpoi
 TensorBoard loss curve, wall time, GPU model, and peak `memory.used` from the corresponding
 `logs/gpu-pushcube-JOB_ID.csv`. Report `success_once` per evaluation seed and its mean ± sample
 standard deviation from `evaluation-final/summary.json`.
+
+## Push-T 20% target workflow
+
+`configs/pusht_rgb_20pct.yaml` is a clean follow-up to the zero-success Push-T runs. It retains
+the spatial RGB encoder that worked for PushCube but restores the settings ManiSkill tunes
+specifically for Push-T: `pd_ee_delta_pose`, one-step execution with replanning after every
+contact, 150-step episodes, and 50,000 updates. It also uses the official RGB baseline batch size
+of 256. Because the controller changes the action dimension, this run must start from scratch.
+
+Prepare a separate RGB replay with delta-pose action labels on an interactive L40S allocation:
+
+```bash
+NUM_DEMOS=100 REPLAY_ENVS=64 bash scripts/prepare_pusht_20pct_demos.sh
+```
+
+Run a one-update integration test before spending the full training budget:
+
+```bash
+python train_dp.py \
+  --config configs/pusht_rgb_20pct.yaml \
+  --exp-name pusht-rgb-20pct-smoke \
+  --num-demos 4 \
+  --batch-size 8 \
+  --total-iters 1 \
+  --warmup-steps 1 \
+  --eval-freq 1 \
+  --save-freq 1 \
+  --num-eval-episodes 1 \
+  --num-eval-envs 1 \
+  --no-capture-video
+```
+
+Submit training only after the smoke test succeeds:
+
+```bash
+mkdir -p logs
+bash -n scripts/train_hce_pusht_20pct.sbatch
+sbatch scripts/train_hce_pusht_20pct.sbatch
+```
+
+Use the 20-episode evaluations at iterations 5,000, 10,000, and 15,000 as an early signal. Keep
+training while the policy shows increasingly purposeful contact in videos, even if the first
+successes have not appeared. If actions still ignore RGB or consistently push the T away from the
+goal at iteration 15,000, run `diagnose_dp.py` and inspect the videos before spending the remaining
+budget. Do not use training loss by itself as the stop/go criterion.
+
+If a checkpoint reaches at least 20% diagnostic `success_once`, finish the scheduled run and submit
+the independent three-seed evaluation:
+
+```bash
+mkdir -p logs
+bash -n scripts/eval_hce_pusht_20pct.sbatch
+sbatch scripts/eval_hce_pusht_20pct.sbatch
+```
+
+The evaluation uses the best diagnostic checkpoint for 100 fresh episodes under each of seeds 0,
+1, and 2, then writes `evaluation-final/summary.json`. Treat 20% on the small diagnostic set as a
+checkpoint-selection signal; the reportable result is the mean and sample standard deviation over
+the final 300 rollouts.
 
 ## Attribution
 
