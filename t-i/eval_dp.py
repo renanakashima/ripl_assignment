@@ -28,6 +28,8 @@ def main() -> None:
     train_config = TrainConfig(
         **{key: value for key, value in train_values.items() if key in valid_fields}
     )
+    if config.act_horizon is not None:
+        train_config.act_horizon = config.act_horizon
     validate_policy_config(train_config)
     seed = train_config.seed if config.seed is None else config.seed
     seed_everything(seed, train_config.torch_deterministic)
@@ -65,6 +67,7 @@ def main() -> None:
             "iteration": checkpoint.get("iteration"),
             "num_eval_episodes": config.num_eval_episodes,
             "seed": seed,
+            "act_horizon": train_config.act_horizon,
             "metrics": {key: float(np.mean(values)) for key, values in raw_metrics.items()},
         }
         with (output_dir / "metrics.json").open("w", encoding="utf-8") as handle:

@@ -1,4 +1,4 @@
-from ripl.config import TrainConfig, parse_config
+from ripl.config import EvalConfig, TrainConfig, parse_config
 
 
 def test_yaml_config_and_cli_override():
@@ -9,6 +9,15 @@ def test_yaml_config_and_cli_override():
     assert config.total_iters == 12
     assert config.unet_dims == (32, 64, 128)
     assert config.demo_path.endswith("trajectory.rgb.pd_ee_delta_pos.physx_cuda.h5")
+
+
+def test_eval_config_accepts_action_horizon_override():
+    config = parse_config(
+        EvalConfig,
+        ["--checkpoint", "checkpoint.pt", "--act-horizon", "8"],
+    )
+    assert config.checkpoint == "checkpoint.pt"
+    assert config.act_horizon == 8
 
 
 def test_spatial_config_preserves_image_location():

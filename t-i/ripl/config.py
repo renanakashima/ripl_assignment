@@ -67,6 +67,7 @@ class EvalConfig:
     checkpoint: str
     num_eval_episodes: int = 20
     num_eval_envs: int = 10
+    act_horizon: int | None = None
     sim_backend: str | None = None
     capture_video: bool = True
     output_dir: str | None = None
