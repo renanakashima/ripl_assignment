@@ -28,6 +28,8 @@ and the environment/data workflow follows the
 │   ├── pusht_rgb_spatial.yaml   # spatial PushT follow-up
 │   └── smoke.yaml               # ten-update integration test
 ├── scripts/
+│   ├── aggregate_eval.py        # summarize final metrics across evaluation seeds
+│   ├── eval_hce_pushcube.sbatch # three-seed, 300-rollout PushCube evaluation
 │   ├── setup_colab.sh           # Python dependencies + headless Vulkan
 │   ├── prepare_pushcube_demos.sh
 │   ├── prepare_pusht_demos.sh   # download and replay RGB demonstrations
@@ -211,6 +213,32 @@ mkdir -p logs
 bash -n scripts/train_hce_pushcube.sbatch
 sbatch scripts/train_hce_pushcube.sbatch
 ```
+
+After training, inspect the run log and submit the final evaluation. This evaluates the checkpoint
+with the best diagnostic `success_once` on 100 fresh episodes under each of seeds 0, 1, and 2. The
+three runs all use the same checkpoint; these are environment/evaluation seeds, not three separate
+training runs.
+
+```bash
+tail -n 40 "$(ls -t logs/pushcube-dp-*.out | head -n 1)"
+mkdir -p logs
+bash -n scripts/eval_hce_pushcube.sbatch
+sbatch scripts/eval_hce_pushcube.sbatch
+```
+
+The batch job writes each seed's `metrics.json` plus `evaluation-final/summary.json`, which contains
+the mean and sample standard deviation across the three 100-rollout success rates. To target a
+specific run instead of the newest completed PushCube run, export its path when submitting:
+
+```bash
+RIPL_RUN_DIR="$HOME/ripl_assignment/t-i/runs/RUN_NAME" \
+  sbatch --export=ALL,RIPL_RUN_DIR scripts/eval_hce_pushcube.sbatch
+```
+
+For the report, preserve the training log, `configs/pushcube_rgb.yaml`, checkpoint iteration,
+TensorBoard loss curve, wall time, GPU model, and peak `memory.used` from the corresponding
+`logs/gpu-pushcube-JOB_ID.csv`. Report `success_once` per evaluation seed and its mean ± sample
+standard deviation from `evaluation-final/summary.json`.
 
 ## Attribution
 
