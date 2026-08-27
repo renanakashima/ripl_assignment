@@ -49,3 +49,17 @@ def test_pusht_20pct_config_uses_supported_controller_and_task_tuned_horizon():
     assert config.batch_size == 256
     assert config.act_horizon == 1
     assert config.pool_visual_feature_map is False
+
+
+def test_pusht_delta_pose_config_matches_published_controller():
+    config = parse_config(TrainConfig, ["--config", "configs/pusht_rgb_delta_pose.yaml"])
+    assert config.env_id == "PushT-v1"
+    assert config.control_mode == "pd_ee_delta_pose"
+    assert config.demo_path.endswith("trajectory.rgb.pd_ee_delta_pose.physx_cuda.h5")
+    assert config.num_demos == 100
+    assert config.sim_backend == "physx_cuda"
+    assert config.max_episode_steps == 150
+    assert config.total_iters == 50_000
+    assert config.batch_size == 256
+    assert config.act_horizon == 1
+    assert config.pool_visual_feature_map is False

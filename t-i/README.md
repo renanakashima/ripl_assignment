@@ -27,6 +27,7 @@ and the environment/data workflow follows the
 │   ├── pusht_rgb.yaml           # original PushT experiment
 │   ├── pusht_rgb_spatial.yaml   # spatial PushT follow-up
 │   ├── pusht_rgb_20pct.yaml     # task-tuned spatial PushT attempt
+│   ├── pusht_rgb_delta_pose.yaml # native-controller visual PushT experiment
 │   └── smoke.yaml               # ten-update integration test
 ├── scripts/
 │   ├── aggregate_eval.py        # summarize final metrics across evaluation seeds
@@ -35,9 +36,13 @@ and the environment/data workflow follows the
 │   ├── prepare_pushcube_demos.sh
 │   ├── prepare_pusht_demos.sh   # download and replay RGB demonstrations
 │   ├── prepare_pusht_20pct_demos.sh
+│   ├── prepare_pusht_delta_pose_demos.sh
+│   ├── prepare_hce_pusht_delta_pose.sbatch
 │   ├── train_hce_pushcube.sbatch
 │   ├── train_hce_pusht_20pct.sbatch
 │   ├── eval_hce_pusht_20pct.sbatch
+│   ├── train_hce_pusht_delta_pose.sbatch
+│   ├── eval_hce_pusht_delta_pose.sbatch
 │   ├── train_colab.sh
 │   └── verify_setup.py
 ├── notebooks/
@@ -67,31 +72,39 @@ runtime type > T4 GPU**. Confirm that `!python --version` reports 3.12.x, then r
 !bash scripts/setup_colab.sh
 ```
 
-Request replay of 100 RGB demonstrations:
+The recommended Push-T vision experiment uses the native `pd_ee_delta_pose` source selected by
+ManiSkill's published Push-T command. Its demonstrations were collected with 1,024 GPU
+environments. Generate the high-fidelity RGB replay once on a large HCE GPU, then copy the HDF5
+and JSON files to Colab or Google Drive. A T4-conscious replay is available for smoke testing, but
+must be marked explicitly because it does not match collection parallelism:
 
 ```python
-!NUM_DEMOS=100 REPLAY_ENVS=64 bash scripts/prepare_pusht_demos.sh
+!ALLOW_REPLAY_ENV_MISMATCH=1 NUM_DEMOS=100 REPLAY_ENVS=64 \
+  bash scripts/prepare_pusht_delta_pose_demos.sh
 ```
 
-This first downloads ManiSkill's compressed PushT demonstrations and then requests replay of the
-first 100 with RGB observations. Replay is a required preprocessing step—the downloaded files omit
-images. ManiSkill can retain fewer trajectories when some replayed episodes are not marked
-successful; the full configuration therefore loads every trajectory actually retained.
-ManiSkill's upstream script uses 256 parallel GPU environments for PushT. The Colab default here
-is 64 to fit a T4; if it succeeds and memory permits, `REPLAY_ENVS=256` most closely matches the
-upstream recipe. PushT is unusually sensitive to tiny simulator differences, so do not change the
-simulation backend between replay and evaluation.
+The script validates the native controller, the first 100 source success labels, collection versus
+replay parallelism, output controller and observation mode, exact trajectory count, and the
+required `T + 1` RGB frames for `T` actions. Push-T is unusually sensitive to tiny simulator
+differences, so use the 1,024-environment HCE replay for the actual experiment.
 
 Run the short end-to-end test before committing to a full job:
 
 ```python
-!python train_dp.py --config configs/smoke.yaml
+!python train_dp.py \
+  --config configs/pusht_rgb_delta_pose.yaml \
+  --exp-name pusht-rgb-delta-pose-smoke \
+  --num-demos 4 --batch-size 8 \
+  --total-iters 1 --warmup-steps 1 \
+  --eval-freq 1 --save-freq 1 \
+  --num-eval-episodes 1 --num-eval-envs 1 \
+  --no-capture-video
 ```
 
 Then train the full experiment:
 
 ```python
-!python train_dp.py --config configs/pusht_rgb.yaml
+!python train_dp.py --config configs/pusht_rgb_delta_pose.yaml --batch-size 128
 ```
 
 The full config requests 50,000 gradient updates. Runtime depends on the assigned Colab GPU and
@@ -105,7 +118,7 @@ drive.mount("/content/drive")
 ```
 
 ```python
-!python train_dp.py --config configs/pusht_rgb.yaml \
+!python train_dp.py --config configs/pusht_rgb_delta_pose.yaml --batch-size 128 \
   --output-dir /content/drive/MyDrive/ripl-pusht-runs
 ```
 
@@ -113,7 +126,7 @@ Resume after a disconnect by setting a larger or unchanged `total_iters` and loa
 checkpoint:
 
 ```python
-!python train_dp.py --config configs/pusht_rgb.yaml \
+!python train_dp.py --config configs/pusht_rgb_delta_pose.yaml --batch-size 128 \
   --resume /content/drive/MyDrive/ripl-pusht-runs/RUN_NAME/checkpoints/step_5000.pt \
   --total-iters 50000
 ```
@@ -252,37 +265,50 @@ TensorBoard loss curve, wall time, GPU model, and peak `memory.used` from the co
 `logs/gpu-pushcube-JOB_ID.csv`. Report `success_once` per evaluation seed and its mean ± sample
 standard deviation from `evaluation-final/summary.json`.
 
-## Push-T 20% target workflow
+## Recommended Push-T vision workflow
 
-`configs/pusht_rgb_20pct.yaml` is a clean follow-up to the zero-success Push-T runs. It retains
-the spatial RGB encoder that worked for PushCube and restores one-step execution with replanning
-after every contact, which ManiSkill tunes specifically for Push-T. It keeps the validated
-`pd_ee_delta_pos` replay because ManiSkill cannot convert this end-effector controller to
-`pd_ee_delta_pose`: controller conversion is unsupported in GPU-parallel replay, and its CPU
-conversion path only implements joint-controller sources. The run uses 150-step episodes, 50,000
-updates, and the official RGB baseline batch size of 256. Train it from scratch so the comparison
-has an independent optimizer and learning-rate schedule.
+The previous `configs/pusht_rgb_20pct.yaml` experiment is preserved as historical evidence, but
+it uses a `pd_ee_delta_pos` dataset and should not be the next run. The controlled recovery
+experiment is `configs/pusht_rgb_delta_pose.yaml`: native `pd_ee_delta_pose` source trajectories,
+100 demonstrations, the corrected `env_states[t + 1]` RGB replay, 1,024 replay environments,
+spatial RGB features, one-step replanning, 150-step episodes, and 50,000 updates. The controller,
+demonstration count, training horizon, and budget now match ManiSkill's published state-based
+Push-T command; the observation remains RGB as required by this assignment.
 
-Prepare or verify the RGB replay on an interactive NVIDIA allocation. The script first verifies
-that all 100 selected source trajectories end successfully, then uses ManiSkill's
-`--allow-failure` flag to retain all of them if Push-T's replay-time success calculation produces
-false negatives. It fails unless the resulting RGB dataset contains exactly 100 trajectories.
-The wrapper also corrects a GPU replay state-index mismatch present in affected ManiSkill
-releases: after action `t`, replay must restore recorded state `t + 1`, not state `t`. Without this
-correction, later RGB observations are paired with actions from the wrong recorded state. The
-wrapper inspects the installed implementation and fails rather than applying an ambiguous patch.
-The default of 256 replay environments matches the upstream collection setup:
+The source metadata reports that these Push-T trajectories were collected with 1,024 parallel
+environments. ManiSkill warns that Push-T replay is sensitive to parallel simulation differences,
+so the preparation script fails if collection and replay parallelism differ unless an explicit
+smoke-test override is supplied. It also verifies the native controller, all selected source
+success labels, output controller and observation mode, exact trajectory count, and `T + 1` RGB
+observations for `T` actions.
+
+For the reportable dataset, queue the replay on HCE from the `t-i` directory:
 
 ```bash
-NUM_DEMOS=100 REPLAY_ENVS=256 bash scripts/prepare_pusht_20pct_demos.sh
+mkdir -p logs
+bash -n scripts/prepare_hce_pusht_delta_pose.sbatch
+sbatch scripts/prepare_hce_pusht_delta_pose.sbatch
 ```
+
+Monitor it with `squeue -j JOB_ID` and `tail -F logs/pusht-replay-delta-pose-JOB_ID.out`. Do not
+start training until the log contains all three confirmations:
+
+```text
+Verified 100 successful pd_ee_delta_pose source trajectories; collection environments: 1024; replay environments: 1024
+Applied PushT GPU replay alignment: env_states[t] -> env_states[t + 1]
+Verified 100 RGB pd_ee_delta_pose trajectories with aligned observation/action lengths
+```
+
+If a partial or older native-controller output already exists, move both its HDF5 and JSON files
+aside before resubmitting. `ALLOW_REPLAY_ENV_MISMATCH=1` is reserved for a quick Colab/T4
+integration test and must not be used for the final dataset.
 
 Run a one-update integration test before spending the full training budget:
 
 ```bash
 python train_dp.py \
-  --config configs/pusht_rgb_20pct.yaml \
-  --exp-name pusht-rgb-20pct-smoke \
+  --config configs/pusht_rgb_delta_pose.yaml \
+  --exp-name pusht-rgb-delta-pose-smoke \
   --num-demos 4 \
   --batch-size 8 \
   --total-iters 1 \
@@ -298,8 +324,8 @@ Submit training only after the smoke test succeeds:
 
 ```bash
 mkdir -p logs
-bash -n scripts/train_hce_pusht_20pct.sbatch
-sbatch scripts/train_hce_pusht_20pct.sbatch
+bash -n scripts/train_hce_pusht_delta_pose.sbatch
+sbatch scripts/train_hce_pusht_delta_pose.sbatch
 ```
 
 Use the 20-episode evaluations at iterations 5,000, 10,000, and 15,000 as an early signal. Keep
@@ -313,8 +339,8 @@ the independent three-seed evaluation:
 
 ```bash
 mkdir -p logs
-bash -n scripts/eval_hce_pusht_20pct.sbatch
-sbatch scripts/eval_hce_pusht_20pct.sbatch
+bash -n scripts/eval_hce_pusht_delta_pose.sbatch
+sbatch scripts/eval_hce_pusht_delta_pose.sbatch
 ```
 
 The evaluation uses the best diagnostic checkpoint for 100 fresh episodes under each of seeds 0,

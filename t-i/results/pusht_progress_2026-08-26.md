@@ -42,9 +42,9 @@ every action. The affected implementation restored `env_states[t]` after action 
 trajectory with `T` actions contains `T + 1` states and the next action must begin from
 `env_states[t + 1]`.
 
-## Push-T configuration
+## Historical delta-position Push-T configuration
 
-Current config: `configs/pusht_rgb_20pct.yaml`
+Historical config: `configs/pusht_rgb_20pct.yaml`
 
 - Environment: `PushT-v1`
 - Observation: RGB plus robot proprioception
@@ -246,3 +246,50 @@ rollouts under seeds 0, 1, and 2 for each failure configuration.
 
 Do not invent the second failure mode before inspecting rollouts. One previously observed behavior
 is pushing the T away from the target; the other must be established empirically.
+
+## Native delta-pose recovery plan
+
+The next controlled experiment supersedes the older continuation command above. A provenance
+audit found an official Push-T RL dataset whose controller is already `pd_ee_delta_pose`, matching
+ManiSkill's published tuned state-based Push-T command. Its metadata records collection with 1,024
+parallel environments, 719 episodes, and 719 successful episode labels. This avoids unsupported
+controller conversion and lets replay use the same parallelism as collection, which ManiSkill
+identifies as important for Push-T fidelity.
+
+New experiment lineage:
+
+- Config: `configs/pusht_rgb_delta_pose.yaml`
+- Raw data: `trajectory.none.pd_ee_delta_pose.physx_cuda.h5`
+- RGB data: `trajectory.rgb.pd_ee_delta_pose.physx_cuda.h5`
+- Demonstrations: exactly 100 successful trajectories
+- Collection/replay environments: 1,024 / 1,024 for the reportable dataset
+- Controller: native `pd_ee_delta_pose` throughout
+- Observation: RGB plus robot proprioception
+- Replay alignment: recorded `env_states[t + 1]` after action `t`
+- Horizons: observation/action/prediction = 2 / 1 / 16
+- Training: 50,000 iterations, batch 256, 20 diagnostic episodes every 5,000 iterations
+
+The pipeline adds `scripts/validate_pusht_replay.py`, which checks source provenance and success,
+collection/replay parallelism, output controller and RGB mode, exact trajectory count, and one
+more RGB observation than actions in every episode. A reduced replay is allowed only by setting
+`ALLOW_REPLAY_ENV_MISMATCH=1`, and is suitable for integration testing rather than final results.
+
+Queue the faithful replay, then train from scratch only after all validator messages appear:
+
+```bash
+cd ~/ripl_assignment/t-i
+source .venv/bin/activate
+mkdir -p logs
+
+sbatch scripts/prepare_hce_pusht_delta_pose.sbatch
+# after successful replay validation:
+sbatch scripts/train_hce_pusht_delta_pose.sbatch
+```
+
+Do not reuse the delta-position RGB file or resume either zero-success checkpoint. At iterations
+15,000–20,000, require both rollout video review and overlap diagnostics; loss alone is not a
+closed-loop metric. If native delta-pose remains at zero, establish a state-based control on the
+same 100 source episodes before changing the RGB architecture. If the state control succeeds but
+RGB fails, the next isolated variable should be the image encoder, not data/controller/backend
+simultaneously. A checkpoint that clears the 20% diagnostic target should be evaluated with
+`scripts/eval_hce_pusht_delta_pose.sbatch` over 100 episodes for each seed 0, 1, and 2.
