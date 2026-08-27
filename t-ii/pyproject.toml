@@ -3,19 +3,13 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ripl-visual-diffusion-policy"
+name = "ripl-pusht-failure-analysis"
 version = "0.1.0"
-description = "RGB-conditioned Diffusion Policy for ManiSkill PushT-v1 and PushCube-v1"
-readme = "README.md"
+description = "Failure identification and targeted evaluation for the RIPL Push-T assignment"
 requires-python = ">=3.10,<3.13"
 dependencies = [
-  "diffusers>=0.30,<1",
-  "h5py>=3.11,<4",
-  "imageio[ffmpeg]>=2.34,<3",
-  "mani_skill>=3.0.0,<4",
   "numpy>=1.26,<3",
   "PyYAML>=6,<7",
-  "tensorboard>=2.17,<3",
   "torch>=2.4,<3",
   "tqdm>=4.66,<5",
   "tyro>=0.8,<1",
@@ -23,14 +17,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<9", "ruff>=0.6,<1"]
-report = ["reportlab>=4,<5"]
-tracking = ["wandb>=0.17,<1"]
 
 [tool.setuptools.packages.find]
-include = ["ripl*"]
+include = ["ripl_t2*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = [".", "../t-i"]
 
 [tool.ruff]
 line-length = 100

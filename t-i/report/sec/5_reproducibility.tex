@@ -1,0 +1,52 @@
+\section{Engineering and Reproducibility}
+
+The project targets Python 3.10--3.12 and separates configuration, data, networks, policy,
+environment construction, and evaluation into testable modules. YAML defines the experiment, and
+the resolved JSON configuration is copied into every run directory. Checkpoints contain online and
+EMA weights, optimizer and scheduler state, EMA state, current iteration, best metrics, and the
+training configuration. This is why the 15k continuation is mathematically the same scheduled run
+rather than an informal warm start.
+
+The measured environment is summarized in Table~\ref{tab:software}. The Pod used the mutable
+\texttt{maniskill/base:latest} image, so exact package versions are recorded to remove ambiguity.
+
+\begin{table}[t]
+    \centering
+    \caption{Software and hardware for the completed Push-T run.}
+    \label{tab:software}
+    \footnotesize
+    \begin{tabular}{@{}ll@{}}
+        \toprule
+        Component & Version / device \\
+        \midrule
+        Python / ManiSkill / SAPIEN & 3.12.13 / 3.0.1 / 3.0.3 \\
+        PyTorch / Diffusers & 2.13.0 / 0.40.0 \\
+        Gymnasium / NumPy / h5py & 1.3.0 / 2.5.2 / 3.16.0 \\
+        GPU / driver-reported CUDA & NVIDIA A40 / 13.0 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The evaluator writes one \texttt{metrics.json} per seed, and a separate aggregation command writes
+\texttt{summary.json}. Complete evidence includes the aligned HDF5 and metadata hashes, config,
+checkpoint lineage, both training logs, TensorBoard events, five-second GPU CSV, seed metrics,
+aggregate summary, and videos. Large artifacts are backed up outside ordinary Git history; source,
+configs, tests, launchers, and concise result summaries remain in Git.
+
+Implementation safeguards include:
+\begin{itemize}
+    \item CPU vector environments expose episode metrics directly, whereas the GPU wrapper may
+    place them under \texttt{final\_info}; the evaluator supports both representations.
+    \item Underscore-prefixed fields such as \texttt{\_success\_once} are Gymnasium validity masks,
+    not metrics. Aggregation uses the corresponding non-prefixed value.
+    \item All evaluation environments use \texttt{reconfiguration\_freq=1}; otherwise cached scene
+    configurations can make nominally different episodes share initialization state.
+    \item RGB replay aborts on controller, parallelism, observation-count, or source-code mismatch
+    instead of silently producing a different dataset.
+    \item Unit tests cover configuration validation, temporal sequence construction, policy shapes,
+    CPU/GPU metric extraction, three-seed aggregation, replay alignment, and dataset provenance.
+\end{itemize}
+
+The local verification suite contains 20 passing T-I tests. The repository exposes equivalent
+Colab, HCE, and Runpod entry points, but the minimal reproduction path is the stage-based Runpod
+launcher in Appendix~\ref{sec:reproduction}.

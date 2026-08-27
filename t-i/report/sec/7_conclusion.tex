@@ -1,0 +1,20 @@
+\section{Conclusion and Lessons}
+
+We trained an RGB Diffusion Policy for ManiSkill Push-T for 50,000 updates and evaluated one fixed
+EMA checkpoint over 300 held-out rollouts. The resulting baseline is \timean\% $\pm$ \tistd{}
+percentage points across environment seeds, with \tipooled{} pooled successes. The result is
+credible because the RGB replay is temporally aligned, controller-native, parallelism-matched, and
+validated before training; the checkpoint and evaluation lineage is preserved.
+
+The strongest completed evidence is T-I. T-II evaluation code and a falsifiable pose-conditioned
+protocol were prepared, but infrastructure and time prevented the required rollouts; T-III and
+T-IV were not executed. A substantial fraction of the work involved finding and correcting the
+RGB replay alignment defect, matching simulator parallelism, establishing restart-safe GPU
+training, and preserving a fixed-checkpoint evaluation. We prioritized this auditable baseline
+over presenting unvalidated failure clusters or rushed RL curves.
+
+The main lesson is methodological: tensor shapes, decreasing loss, and plausible videos are
+insufficient without temporal provenance and closed-loop metrics. Likewise, failure labels require
+pose-conditioned replication, and LLM-generated rewards require executable validation against the
+simulator state. These gates define a concrete continuation path while keeping the claims in this
+submission commensurate with the evidence actually obtained.

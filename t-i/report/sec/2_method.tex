@@ -1,0 +1,72 @@
+\section{Method}
+
+\subsection{Task, observations, and actions}
+
+Push-T fixes the goal at world position $(-0.156,-0.100)$ m with yaw $300^\circ$ and samples the
+T block across position and orientation~\cite{maniskill_pusht}. Success requires the rendered
+intersection between the block and goal to reach at least 0.90. The primary metric,
+\successonce, records whether this threshold is reached at any point; \successend records whether
+it remains satisfied at the time limit.
+
+The policy receives RGB images and robot proprioception, but no privileged block or goal pose. At
+each decision it conditions on observation horizon $T_o=2$. RGB frames are scaled to $[0,1]$ and
+processed by a five-layer convolutional encoder. A $128\!\times\!128$ image becomes a
+$128\!\times\!8\!\times\!8$ feature map, which is flattened and projected to 256 dimensions.
+Retaining this spatial map is important because global pooling discards absolute block and goal
+location. The visual feature is concatenated with robot state at each observation step.
+
+The demonstrations and evaluation both use ManiSkill's \texttt{pd\_ee\_delta\_pose} controller.
+Actions are normalized to $[-1,1]$. We execute one action and immediately replan
+($T_a=1$), matching the tuned Push-T control pattern and limiting open-loop error during contact.
+
+\subsection{Conditional action diffusion}
+
+The policy predicts noise for a $T_p=16$ action sequence with a conditional one-dimensional
+U-Net. It uses channel widths $[64,128,256]$, GroupNorm, Mish activations, skip connections, and
+FiLM-style conditioning on visual-proprioceptive history and a 64-dimensional sinusoidal
+diffusion-step embedding. Training samples diffusion step $k$, adds noise $\epsilon$ to a
+demonstrated action sequence, and minimizes
+\begin{equation}
+    \mathcal{L}(\theta)=
+    \mathbb{E}_{a,\epsilon,k}\!
+    \left[\left\|\epsilon-\epsilon_\theta(a_k,k,o_{t-1:t})\right\|_2^2\right].
+\end{equation}
+We use 100 denoising steps and a squared-cosine DDPM schedule~\cite{nichol2021improved}.
+
+\subsection{Aligned RGB demonstration replay}
+\label{sec:aligned-replay}
+
+The downloaded RL demonstrations contain simulator states rather than the required RGB sequence.
+We replay the first 100 successful \texttt{pd\_ee\_delta\_pose} trajectories with
+\texttt{physx\_cuda}, RGB observations, and the original 1,024 parallel environments. The
+validated dataset contains 9,865 transitions and 9,765 training windows.
+
+A trajectory with $T$ actions contains $T+1$ environment states. After action $a_t$, the
+observation paired with the next action must begin at $s_{t+1}$. The audited upstream replay path
+restored $s_t$ instead; our fail-closed wrapper changes this operation to
+\texttt{env\_states[t + 1]} in process and rejects source code that does not match the audited
+pattern. Before training, the validator checks source success labels, controller, collection and
+replay parallelism, output observation mode, trajectory count, and exactly $T+1$ RGB observations
+for $T$ actions in every episode.
+
+\subsection{Training and checkpoint protocol}
+
+We train one model with seed 1 using AdamW, batch size 128, learning rate $10^{-4}$, 500 linear
+warmup steps, and cosine decay. Demonstration tensors remain on CPU and minibatches are transferred
+to the GPU. EMA weights with power 0.75 are used for rollout evaluation. Training runs for 50,000
+updates; loss is logged every 100 updates, and a checkpoint is saved every 5,000.
+
+Every 5,000 updates, 20 fresh episodes provide a model-selection diagnostic. A checkpoint replaces
+\texttt{best\_success\_once.pt} only when \successonce strictly improves. Interrupted sessions
+resume the complete training state, not just model weights. The run begins from a 10k Colab
+checkpoint, continues to 15k, and resumes from the validated 15k checkpoint to 50k on Runpod.
+
+\subsection{Fixed-checkpoint evaluation}
+
+Final evaluation loads the single selected EMA checkpoint and runs 100 fresh episodes for each
+environment seed in $\{0,1,2\}$. All seeds use the same training checkpoint; they are not three
+independently trained policies. The evaluator reconfigures every environment, ignores early task
+termination until the 150-step limit, and records synchronized complete episodes. We report each
+seed, the arithmetic mean and sample standard deviation of the three success rates, and pooled
+successes out of 300. Auxiliary metrics include return, maximum overlap, final overlap, and
+\successend.

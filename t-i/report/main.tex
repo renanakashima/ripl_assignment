@@ -1,0 +1,42 @@
+% CVPR 2026 Paper Template; see https://github.com/cvpr-org/author-kit
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+% Page numbers are useful while the assignment report is being assembled.
+\usepackage[pagenumbers]{cvpr}
+
+\input{preamble}
+
+\definecolor{cvprblue}{rgb}{0.21,0.49,0.74}
+\usepackage[pagebackref,breaklinks,colorlinks,allcolors=cvprblue]{hyperref}
+
+\def\paperID{RIPL-Assignment}
+\def\confName{CVPR}
+\def\confYear{2026}
+
+\title{Visual Diffusion Policy on ManiSkill Push-T:\
+Training, Failure-Analysis Protocol, and Proposed Residual Learning}
+
+\author{Renana Kashima\\
+RIPL Lab Prospective Student Assignment}
+
+\begin{document}
+\maketitle
+
+\input{sec/0_abstract}
+\input{sec/1_introduction}
+\input{sec/2_method}
+\input{sec/3_pushcube_results}
+\input{sec/4_pusht_investigation}
+\input{sec/5_reproducibility}
+\input{sec/6_next_steps}
+\input{sec/7_conclusion}
+
+{\small
+\bibliographystyle{ieeenat_fullname}
+\bibliography{main}
+}
+
+\appendix
+\input{sec/A_reproduction}
+
+\end{document}

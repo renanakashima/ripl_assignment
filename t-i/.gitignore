@@ -8,3 +8,7 @@ runs/
 dist/
 build/
 .DS_Store
+
+# Checkpoints, logs, videos, and copied Runpod artifacts are preserved locally,
+# but they are too large and too mutable for ordinary Git history.
+output/runpod_backups/

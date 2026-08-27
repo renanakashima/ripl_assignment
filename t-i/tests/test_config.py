@@ -60,6 +60,6 @@ def test_pusht_delta_pose_config_matches_published_controller():
     assert config.sim_backend == "physx_cuda"
     assert config.max_episode_steps == 150
     assert config.total_iters == 50_000
-    assert config.batch_size == 256
+    assert config.batch_size == 128
     assert config.act_horizon == 1
     assert config.pool_visual_feature_map is False

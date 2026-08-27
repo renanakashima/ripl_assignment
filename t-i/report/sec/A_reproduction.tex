@@ -1,0 +1,48 @@
+\section{Reproduction Entry Points}
+\label{sec:reproduction}
+
+Run commands from \texttt{t-i/}. The reportable Runpod workflow is:
+\par\noindent
+\begin{minipage}{\linewidth}
+\scriptsize\ttfamily
+bash scripts/runpod\_pusht.sh setup\\
+bash scripts/runpod\_pusht.sh prepare\\
+bash scripts/runpod\_pusht.sh smoke\\
+bash scripts/runpod\_pusht.sh train\\
+RIPL\_RUN\_DIR=/workspace/ripl-artifacts/runs/RUN \\
+\hspace*{1em}bash scripts/runpod\_pusht.sh eval
+\end{minipage}
+
+The canonical configuration is
+\path{configs/pusht_rgb_delta_pose.yaml}. The preparation stage invokes
+\path{scripts/prepare_pusht_delta_pose_demos.sh}, applies the audited alignment through
+\path{scripts/replay_trajectory_aligned.py}, and validates the result with
+\path{scripts/validate_pusht_replay.py}.
+
+Resume only from a validated periodic checkpoint:
+\par\noindent
+\begin{minipage}{\linewidth}
+\scriptsize\ttfamily
+RIPL\_RESUME=/path/to/step\_15000.pt \\
+\hspace*{1em}bash scripts/runpod\_pusht.sh train \\
+\hspace*{2em}--total-iters 50000
+\end{minipage}
+
+The final evaluator loads \path{checkpoints/best_success_once.pt} for seeds 0, 1, and 2, saves
+100 episodes per seed, and writes \path{evaluation-final/summary.json}. Exact setup details,
+metric semantics, artifact requirements, and historical experiment provenance are documented in
+\path{t-i/README.md} and \path{results/pusht_progress_2026-08-26.md}.
+
+T-II tooling is independently testable from the repository root:
+\par\noindent
+\begin{minipage}{\linewidth}
+\scriptsize\ttfamily
+python -m pip install -e './t-i[dev]' -e './t-ii[dev]'\\
+python -m pytest -q t-ii/tests
+\end{minipage}
+
+After provisioning a Linux NVIDIA GPU with working Vulkan graphics, the documented
+\path{t-ii/scripts/run_pusht_t2.sh} stages are \texttt{discover}, \texttt{analyze}, and
+\texttt{targeted}. The targeted stage must not be run until discovery evidence defines two
+contiguous pose regimes. T-III's scaffold is similarly tested with
+\texttt{python -m pytest -q t-iii/tests}; these tests do not constitute T-III experiments.

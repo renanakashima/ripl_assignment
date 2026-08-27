@@ -1,0 +1,61 @@
+\section{T-III and T-IV: Proposed Approaches}
+
+Table~\ref{tab:status} separates completed evidence from proposed work. ``Not completed'' means
+that no empirical result is claimed.
+
+\begin{table}[t]
+    \centering
+    \caption{Assignment status at submission time.}
+    \label{tab:status}
+    \footnotesize
+    \begin{tabular}{@{}p{0.13\linewidth}p{0.22\linewidth}p{0.53\linewidth}@{}}
+        \toprule
+        Stage & Status & Evidence / next gate \\
+        \midrule
+        T-I & Complete & Fixed 15k checkpoint; \timean\% $\pm$ \tistd{} pp over 3$\times$100 rollouts. \\
+        T-II & Not completed & Tooling and protocol implemented; no valid discovery rollouts, two verified modes, targeted rates, or MP4 evidence. \\
+        T-III & Not completed & Code scaffold only; no LLM reward or sampler was evaluated. \\
+        T-IV & Not completed & No residual policy was trained or evaluated. \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{T-III: proposed LLM reward and episode generation}
+
+Given a verified T-II rollout, the intended pipeline would provide the MP4, exact Push-T state
+schema, official success definition, and executable simulator API to an LLM. The model would
+return (1) a dense reward combining change in position error, wrapped orientation error, overlap
+progress, action regularization, and terminal success, and (2) a sampler concentrated on the
+measured failure-pose interval while retaining some nominal-distribution starts. Following
+Eureka's code-generation and reward-reflection principle~\cite{ma2023eureka} and ROSETTA-style
+staged grounding~\cite{rosetta}, the model would first describe the observed mechanism, then map
+video claims to available state variables, and only then emit Python.
+
+Generated code would be treated as an untrusted candidate. Static validation would reject unknown
+state fields, side effects, non-finite rewards, out-of-domain reset bounds, and changes to the
+success condition. Unit tests would evaluate each term on constructed states: moving toward the
+goal should not reduce reward, orientation must use wrapped angles, terminal success should
+dominate shaping, and inactivity must not be profitable. Short rollouts would then expose reward
+hacking, scale imbalance, or an overly narrow sampler. The implemented scaffold preserves the
+prompt, raw response, extracted code, validation report, and video hash, but no generated output
+was experimentally evaluated.
+
+\subsection{T-IV: proposed bounded residual PPO}
+
+The intended T-IV method would freeze the RGB Diffusion Policy and learn only a bounded residual
+with PPO:
+\begin{equation}
+    a_t = \operatorname{clip}\!\left(a_t^{\mathrm{DP}} + \alpha
+    \tanh(a_t^{\mathrm{res}}), -1, 1\right).
+\end{equation}
+The residual would observe the same policy inputs plus state variables explicitly authorized for
+the RL experiment; $\alpha$ would be conservative so the correction could not replace the base
+controller wholesale. Training would use the audited T-III reward and a mixture of
+failure-conditioned and nominal starts.
+
+Evaluation would keep the T-I checkpoint, success threshold, horizons, and seeds fixed. Each
+failure mode would compare base and residual policies on 100 targeted episodes at three seeds. A
+second 3$\times$100 evaluation on the original Push-T distribution would measure catastrophic
+forgetting. Necessary ablations include base only, residual without targeted sampling, targeted
+sampling with sparse reward, and the full method. No PPO curve or improvement is reported because
+this experiment was not run.

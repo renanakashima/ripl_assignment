@@ -1,0 +1,13 @@
+{
+  "failure_mode_name": "replace_with_empirical_t2_mode",
+  "analyst_description": "PLACEHOLDER ONLY: replace with a T-II behavior description supported by videos and episode records.",
+  "pose_region": {
+    "x_rel_min": -0.1,
+    "x_rel_max": 0.0,
+    "y_rel_min": -0.1,
+    "y_rel_max": 0.1,
+    "theta_deg_min": 90.0,
+    "theta_deg_max": 180.0
+  }
+}
+

@@ -1,0 +1,35 @@
+\section{Introduction}
+
+T-I asks for a visual-input Diffusion Policy trained by imitation learning in ManiSkill, together
+with training loss, hyperparameters, resource use, and a fixed-checkpoint evaluation over 100
+rollouts at three random seeds. We choose \texttt{PushT-v1}, a contact-rich planar manipulation
+task in which the robot must push a T-shaped block into a fixed T-shaped goal. This policy also
+serves as the base policy whose reproducible failures are studied in T-II--T-IV.
+
+Diffusion Policy represents visuomotor control as conditional denoising over action
+sequences~\cite{chi2023diffusion}. ManiSkill provides the task, GPU-parallel simulator,
+demonstrations, wrappers, and reference implementation used here~\cite{tao2024maniskill3,
+maniskill_baseline}. We first implemented the official quick-start exercises to verify scene
+creation, batched environment reset and stepping, RGB rendering, controllers, and task metrics,
+then adapted ManiSkill's Diffusion Policy baseline into a standalone Python
+package~\cite{maniskill_quickstart}.
+
+The main empirical and engineering findings are:
+\begin{itemize}
+    \item A spatial RGB Diffusion Policy trained on 100 aligned demonstrations produces a
+    nonzero Push-T baseline under a fixed 300-rollout evaluation.
+    \item Diffusion loss falls steadily, but lower loss does not imply a better closed-loop
+    checkpoint: 20-episode diagnostic success fluctuates from 10\% to 30\% after iteration 15k.
+    \item The best checkpoint is iteration 15k. Iteration 40k ties its 30\% diagnostic score, but
+    strict-improvement selection correctly retains the first maximum.
+    \item The decisive roadblock was data alignment, not merely model capacity. The initial RGB
+    replay restored $s_t$ after executing $a_t$; the corrected pipeline restores $s_{t+1}$ and
+    validates every trajectory before training.
+    \item Checkpoint-complete resumption across interrupted GPU sessions preserves optimizer,
+    scheduler, EMA, iteration, and checkpoint-selection state, permitting an auditable 50k run.
+\end{itemize}
+
+As a debugging control, the same visual pipeline previously reached 82.0\% $\pm$ 4.6 percentage
+points on \texttt{PushCube-v1}. That result established that RGB replay, spatial encoding,
+denoising, and closed-loop evaluation functioned end to end; it is not substituted for the
+requested Push-T result in this report.

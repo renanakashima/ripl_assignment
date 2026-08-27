@@ -1,0 +1,98 @@
+\section{T-I Debugging and T-II Status}
+\label{sec:debugging}
+
+\subsection{Why the first Push-T run was rejected}
+
+An earlier spatial RGB checkpoint reached 0\% closed-loop success despite low offline diffusion
+loss, high cosine similarity to stored demonstration actions, and strong sensitivity to shuffled
+RGB. Those diagnostics showed that the model fit its dataset; they did not establish that the
+dataset represented the intended observation-action relation. Treating that checkpoint as a valid
+base policy would have made every downstream failure frequency scientifically ambiguous.
+
+The replay audit identified a concrete temporal defect. In a state-restored trajectory, action
+$a_t$ advances the simulator from $s_t$ to $s_{t+1}$. The subsequent rendered observation must
+therefore correspond to $s_{t+1}$. The original GPU replay restored $s_t$ after the action,
+creating a shifted supervised mapping while preserving plausible images and valid tensor shapes.
+Section~\ref{sec:aligned-replay} describes the fail-closed correction and validation gates. The
+pre-fix checkpoint was not resumed because changing the dataset changes the learned conditional
+mapping.
+
+\noindent\textbf{Fail-closed alignment patch (abridged).}
+\begin{minipage}{\linewidth}
+\scriptsize
+\begin{verbatim}
+OLD = "set_state_dict(env_states_batch[t])"
+NEW = "set_state_dict(env_states_batch[t + 1])"
+if source.count(OLD) != 1:
+    raise RuntimeError("inspect installed source")
+source = source.replace(OLD, NEW)
+\end{verbatim}
+\end{minipage}
+
+\subsection{Controls and independent troubleshooting}
+
+Several controls separated data, architecture, and infrastructure failures. First, a spatial
+feature encoder replaced global visual pooling because Push-T withholds privileged object and goal
+pose; absolute image location is therefore task-relevant. Second, an RGB PushCube control reached
+82.0\% $\pm$ 4.6 percentage points over 300 rollouts, validating the common image replay, policy,
+EMA, and evaluator. Third, the corrected Push-T replay matched the source controller and original
+1,024-environment collection parallelism rather than changing several variables simultaneously.
+
+Infrastructure problems were also made explicit rather than hidden. Python 3.12 and headless
+Vulkan were verified before training. HCE jobs call Python directly because nesting \texttt{srun}
+inside the allocation caused CPU-binding failures. Runpod training was detached from SSH, logged
+to persistent storage, checkpointed every 5k, and resumed from the newest validated checkpoint
+after termination. These decisions are part of reproducibility, not incidental operational detail.
+
+\subsection{Limitations and hidden assumptions}
+
+The result supports a trained visual Push-T baseline, but it does not establish robustness:
+\begin{itemize}
+    \item Only one policy-training seed (seed 1) was affordable. The reported standard deviation
+    measures environment-seed variation for one fixed policy, not training-seed variability.
+    \item Checkpoint selection repeatedly evaluates 20 episodes. Its maximum is statistically
+    noisy and selection-biased, as demonstrated by the lower 300-rollout estimate.
+    \item Push-T GPU replay is sensitive to collection parallelism and simulator state restoration.
+    Matching 1,024 environments reduces a known discrepancy but does not prove bitwise equivalence
+    across hardware or ManiSkill versions.
+    \item \successonce is the official baseline metric, but it credits transient goal entry. We
+    retain \successend, maximum overlap, final overlap, and videos to expose this distinction.
+    \item The loss trace starts at 10.1k because the original Colab TensorBoard event file was not
+    preserved. Checkpoints and evaluation metrics from that segment remain available.
+\end{itemize}
+
+These caveats motivate T-II's pose-conditioned evaluation: aggregate success alone cannot reveal
+which initial configurations fail, whether distinct mechanisms are reproducible, or whether a
+later residual policy improves targeted failures without harming nominal behavior.
+
+\subsection{T-II: implemented protocol, incomplete experiments}
+
+T-II was not completed. We implemented a separate \texttt{t-ii/} package that samples exact
+subsets of Push-T's nominal initial-pose domain, records the initial T pose and TCP pose, saves
+per-step overlap trajectories, assigns non-exclusive screening tags, and aggregates success with
+Wilson intervals. Unit tests cover wrapped angular ranges, exact pose-conditioned resets, metric
+serialization, and failure-tag logic. These tests establish the evaluation machinery, not two
+empirical failure modes.
+
+The preregistered discovery protocol was 200 full-distribution rollouts from relative block
+position $x\in[-0.10,0.10]$ m, $y\in[-0.10,0.20]$ m and yaw $\theta\in[0,360)^\circ$. Candidate
+regions would be selected only after jointly inspecting initial-pose bins, overlap trajectories,
+and videos. Two useful screening hypotheses were (i) low progress after loss of contact and
+(ii) progress regression after transient partial or successful goal overlap. These are plausible
+mechanisms, not reported findings. Each accepted mode would then require a representative MP4 and
+100 targeted rollouts at each seed in $\{0,1,2\}$.
+
+The valid visual run could not be executed before the deadline. The original A40 completed T-I
+and was safely backed up. A replacement A100 booted and received the hash-verified checkpoint, but
+RGB environment creation failed with \texttt{vk::createInstanceUnique:
+ErrorIncompatibleDriver}; graphics-capable A40, RTX A6000/4090, RTX 4000 Ada, and L4 instances
+were unavailable. A local Apple M4 smoke test reproduced the missing-Vulkan barrier. We rejected
+a state-only substitute because it would not evaluate the trained RGB policy. Thus there are no
+defensible T-II per-mode rates or videos, and none are fabricated or inferred from T-I diagnostic
+rollouts.
+
+We also avoid treating an external number as a required target. ManiSkill issue \#882 reports one
+state-input reproduction near 0.15--0.20 and asks why a paper reports 0.4--0.5, but it does not
+establish an expected RGB result or resolve differences in data and simulation
+settings~\cite{maniskill_issue882}. Our baseline is therefore defined by its disclosed protocol,
+not by post-hoc agreement with that thread.

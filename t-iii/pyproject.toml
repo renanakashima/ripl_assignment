@@ -3,34 +3,25 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ripl-visual-diffusion-policy"
+name = "ripl-pusht-llm-reward-generation"
 version = "0.1.0"
-description = "RGB-conditioned Diffusion Policy for ManiSkill PushT-v1 and PushCube-v1"
-readme = "README.md"
+description = "Auditable video-to-reward and episode-sampler generation for Push-T"
 requires-python = ">=3.10,<3.13"
 dependencies = [
-  "diffusers>=0.30,<1",
-  "h5py>=3.11,<4",
-  "imageio[ffmpeg]>=2.34,<3",
-  "mani_skill>=3.0.0,<4",
   "numpy>=1.26,<3",
-  "PyYAML>=6,<7",
-  "tensorboard>=2.17,<3",
   "torch>=2.4,<3",
-  "tqdm>=4.66,<5",
-  "tyro>=0.8,<1",
 ]
 
 [project.optional-dependencies]
+llm = ["openai>=1.50,<3"]
 dev = ["pytest>=8,<9", "ruff>=0.6,<1"]
-report = ["reportlab>=4,<5"]
-tracking = ["wandb>=0.17,<1"]
 
 [tool.setuptools.packages.find]
-include = ["ripl*"]
+include = ["ripl_t3*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 100

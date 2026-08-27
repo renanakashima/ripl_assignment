@@ -21,7 +21,7 @@ visual_feature_dim: 256
 pool_visual_feature_map: false
 
 total_iters: 50000
-batch_size: 256
+batch_size: 128
 lr: 0.0001
 warmup_steps: 500
 dataset_device: cpu
